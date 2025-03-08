@@ -1,0 +1,1 @@
+# Event Management System\n\nA system for managing events with a Python FastAPI backend and Next.js frontend.\n\n- **Backend**: Located in , uses FastAPI and SQLite.\n- **Frontend**: Located in , will use Next.js (TBD).
