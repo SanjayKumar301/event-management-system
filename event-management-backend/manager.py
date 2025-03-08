@@ -2,6 +2,7 @@ import heapq
 from datetime import datetime, timedelta
 from models import Event
 from database import Database
+from intervaltree import IntervalTree, Interval
 
 class EventManager:
     def __init__(self, db: Database):
@@ -33,21 +34,43 @@ class EventManager:
             events.append(evt)
         return events
 
+    def delete_event(self, event_id: str) -> bool:
+        if self.db.delete_event(event_id):
+            self.events.pop(event_id, None)
+            return True
+        return False
+
+    def update_event(self, event_id: str, title=None, date=None, capacity=None, type=None, instructor=None) -> bool:
+        if self.db.update_event(event_id, title, date, capacity, type, instructor):
+            event_data = self.db.get_event(event_id)
+            if event_data:
+                evt = Event(event_data["id"], event_data["title"], event_data["date"], event_data["capacity"], event_data["type"], event_data["instructor"])
+                self.events[event_id] = evt
+            return True
+        return False
+
 class Scheduler:
     def __init__(self, db: Database):
         self.db = db
         self.event_queue = []
+        self.intervals = IntervalTree()
 
     def schedule_event(self, event: Event):
-        for existing_date, existing_id in self.event_queue:
-            existing_event = self.db.get_event(existing_id)
-            if existing_event:
-                existing_start = datetime.strptime(existing_event["date"], "%Y-%m-%dT%H:%M:%S")
-                existing_end = existing_start + timedelta(hours=1)
-                new_start = event.date
-                new_end = new_start + timedelta(hours=1)
-                if new_start < existing_end and new_end > existing_start:
-                    raise ValueError(f"Conflict with event {existing_event['title']} at {existing_event['date']}")
+        start = event.date
+        end = start + timedelta(hours=1)  # Assume 1-hour events
+        # Convert datetime to seconds since epoch for IntervalTree
+        start_ts = start.timestamp()
+        end_ts = end.timestamp()
+        
+        # Check for overlaps
+        if self.intervals.overlaps(start_ts, end_ts):
+            overlapping = self.intervals[start_ts:end_ts]
+            conflicting_id = next(iter(overlapping)).data
+            conflicting_event = self.db.get_event(conflicting_id)
+            raise ValueError(f"Conflict with event {conflicting_event['title']} at {conflicting_event['date']}")
+        
+        # Add to interval tree and priority queue
+        self.intervals[start_ts:end_ts] = event.id
         heapq.heappush(self.event_queue, (event.date, event.id))
 
     def get_next_event(self) -> tuple[datetime, str] | None:

@@ -8,7 +8,6 @@ class Database:
 
     def create_tables(self):
         cursor = self.conn.cursor()
-        # Events table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS events (
                 id TEXT PRIMARY KEY,
@@ -19,7 +18,6 @@ class Database:
                 instructor TEXT
             )
         ''')
-        # Attendees table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS attendees (
                 id TEXT PRIMARY KEY,
@@ -27,7 +25,6 @@ class Database:
                 email TEXT NOT NULL
             )
         ''')
-        # Event-Attendee relationship (many-to-many)
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS event_attendees (
                 event_id TEXT,
@@ -82,6 +79,34 @@ class Database:
                 INSERT OR IGNORE INTO event_attendees (event_id, attendee_id)
                 VALUES (?, ?)
             ''', (event_id, attendee_id))
+            self.conn.commit()
+            return cursor.rowcount > 0
+        return False
+
+    def get_attendee_count(self, event_id):
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT COUNT(*) FROM event_attendees WHERE event_id = ?', (event_id,))
+        return cursor.fetchone()[0]
+    
+    def delete_event(self, event_id):
+        cursor = self.conn.cursor()
+        cursor.execute('DELETE FROM event_attendees WHERE event_id = ?', (event_id,))
+        cursor.execute('DELETE FROM events WHERE id = ?', (event_id,))
+        self.conn.commit()
+        return cursor.rowcount > 0
+    
+    def update_event(self, event_id, title=None, date=None, capacity=None, type=None, instructor=None):
+        cursor = self.conn.cursor()
+        updates = {}
+        if title: updates["title"] = title
+        if date: updates["date"] = date
+        if capacity: updates["capacity"] = capacity
+        if type: updates["type"] = type
+        if instructor: updates["instructor"] = instructor
+        if updates:
+            set_clause = ", ".join(f"{k} = ?" for k in updates.keys())
+            values = list(updates.values()) + [event_id]
+            cursor.execute(f'UPDATE events SET {set_clause} WHERE id = ?', values)
             self.conn.commit()
             return cursor.rowcount > 0
         return False

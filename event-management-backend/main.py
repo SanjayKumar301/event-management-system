@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 db = Database()
 manager = EventManager(db)
-scheduler = Scheduler(db)  # Pass the db instance here
+scheduler = Scheduler(db)
 
 class EventCreate(BaseModel):
     id: str
@@ -19,6 +19,13 @@ class EventCreate(BaseModel):
     date: str
     capacity: int
     type: str = "basic"
+    instructor: str | None = None
+
+class EventUpdate(BaseModel):
+    title: str | None = None
+    date: str | None = None
+    capacity: int | None = None
+    type: str | None = None
     instructor: str | None = None
 
 class AttendeeCreate(BaseModel):
@@ -44,7 +51,7 @@ def create_event(event: EventCreate):
 @app.get("/events")
 def list_events():
     events = manager.list_events()
-    return [{"id": e.id, "title": e.title, "date": str(e.date), "attendees": 0} for e in events]  # Attendees count TBD
+    return [{"id": e.id, "title": e.title, "date": str(e.date), "attendees": db.get_attendee_count(e.id)} for e in events]
 
 @app.post("/events/{event_id}/register")
 def register_attendee(event_id: str, attendee: AttendeeCreate):
@@ -56,6 +63,18 @@ def register_attendee(event_id: str, attendee: AttendeeCreate):
         db.add_attendee(att)
         return {"message": f"{att.name} registered for {event.title}"}
     raise HTTPException(status_code=400, detail="Event is full or registration failed")
+
+@app.delete("/events/{event_id}")
+def delete_event(event_id: str):
+    if manager.delete_event(event_id):
+        return {"message": f"Event {event_id} deleted"}
+    raise HTTPException(status_code=404, detail="Event not found")
+
+@app.put("/events/{event_id}")
+def update_event(event_id: str, event: EventUpdate):
+    if manager.update_event(event_id, event.title, event.date, event.capacity, event.type, event.instructor):
+        return {"message": f"Event {event_id} updated"}
+    raise HTTPException(status_code=404, detail="Event not found")
 
 @app.get("/scheduler/next")
 def get_next_event():
