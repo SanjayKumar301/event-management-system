@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# CORS Middleware (broad for debugging, tighten later)
+# CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
@@ -22,8 +22,8 @@ app.add_middleware(
 
 # Initialize database and managers
 db = Database()
-manager = EventManager(db)
-scheduler = Scheduler(db)
+scheduler = Scheduler(db)  # Define scheduler first
+manager = EventManager(db, scheduler)  # Now pass scheduler
 
 # Pydantic models for request validation
 class EventCreate(BaseModel):
@@ -65,7 +65,10 @@ def create_event(event: EventCreate):
 @app.get("/events")
 def list_events():
     events = manager.list_events()
-    return [{"id": e.id, "title": e.title, "date": str(e.date), "attendees": db.get_attendee_count(e.id)} for e in events]
+    logger.info(f"Events from manager: {events}")
+    result = [{"id": e.id, "title": e.title, "date": str(e.date), "attendees": db.get_attendee_count(e.id)} for e in events]
+    logger.info(f"Formatted result: {result}")
+    return result
 
 @app.post("/events/{event_id}/register")
 def register_attendee(event_id: str, attendee: AttendeeCreate):

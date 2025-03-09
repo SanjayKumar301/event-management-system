@@ -5,9 +5,10 @@ from database import Database
 from intervaltree import IntervalTree
 
 class EventManager:
-    def __init__(self, db: Database):
+    def __init__(self, db: Database, scheduler):
         self.db = db
         self.events = {}
+        self.scheduler = scheduler  # Store the scheduler instance
 
     def add_event(self, event: Event) -> bool:
         if self.db.add_event(event):
@@ -20,7 +21,12 @@ class EventManager:
             return self.events[event_id]
         event_data = self.db.get_event(event_id)
         if event_data:
-            evt = Event(event_data["id"], event_data["title"], event_data["date"], event_data["capacity"], event_data["type"], event_data["instructor"])
+            date_str = event_data["date"]
+            try:
+                date = datetime.fromisoformat(date_str)
+            except ValueError:
+                date = datetime.strptime(date_str, "%Y-%m-%d %H:%M")
+            evt = Event(event_data["id"], event_data["title"], date.isoformat(), event_data["capacity"], event_data["type"], event_data["instructor"])
             self.events[event_id] = evt
             return evt
         return None
@@ -29,14 +35,21 @@ class EventManager:
         db_events = self.db.list_events()
         events = []
         for e in db_events:
-            evt = Event(e["id"], e["title"], e["date"], e["capacity"], e["type"], e["instructor"])
+            date_str = e["date"]
+            try:
+                date = datetime.fromisoformat(date_str)
+            except ValueError:
+                date = datetime.strptime(date_str, "%Y-%m-%d %H:%M")
+            evt = Event(e["id"], e["title"], date.isoformat(), e["capacity"], e["type"], e["instructor"])
             self.events[e["id"]] = evt
             events.append(evt)
         return events
 
     def delete_event(self, event_id: str) -> bool:
-        if self.db.delete_event(event_id):
+        event = self.get_event(event_id)
+        if event and self.db.delete_event(event_id):
             self.events.pop(event_id, None)
+            self.scheduler.remove_event(event_id)  # Use the instance
             return True
         return False
 
@@ -44,7 +57,12 @@ class EventManager:
         if self.db.update_event(event_id, title, date, capacity, type, instructor):
             event_data = self.db.get_event(event_id)
             if event_data:
-                evt = Event(event_data["id"], event_data["title"], event_data["date"], event_data["capacity"], event_data["type"], event_data["instructor"])
+                date_str = event_data["date"]
+                try:
+                    date = datetime.fromisoformat(date_str)
+                except ValueError:
+                    date = datetime.strptime(date_str, "%Y-%m-%d %H:%M")
+                evt = Event(event_data["id"], event_data["title"], date.isoformat(), event_data["capacity"], event_data["type"], event_data["instructor"])
                 self.events[event_id] = evt
             return True
         return False
@@ -71,6 +89,15 @@ class Scheduler:
         # Add to interval tree and priority queue
         self.intervals[start_ts:end_ts] = event.id
         heapq.heappush(self.event_queue, (event.date, event.id))
+
+    def remove_event(self, event_id: str):
+        # Remove all intervals associated with this event_id
+        to_remove = [iv for iv in self.intervals if iv.data == event_id]
+        for iv in to_remove:
+            self.intervals.remove(iv)
+        # Rebuild the priority queue
+        self.event_queue = [(t, eid) for t, eid in self.event_queue if eid != event_id]
+        heapq.heapify(self.event_queue)
 
     def get_next_event(self) -> tuple[datetime, str] | None:
         return self.event_queue[0] if self.event_queue else None
