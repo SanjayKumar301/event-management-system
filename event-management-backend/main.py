@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from models import Event, Attendee
 from manager import EventManager, Scheduler
@@ -9,10 +10,22 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+
+# CORS Middleware (broad for debugging, tighten later)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Initialize database and managers
 db = Database()
 manager = EventManager(db)
 scheduler = Scheduler(db)
 
+# Pydantic models for request validation
 class EventCreate(BaseModel):
     id: str
     title: str
@@ -33,6 +46,7 @@ class AttendeeCreate(BaseModel):
     name: str
     email: str
 
+# Endpoints
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Event Management System API"}

@@ -2,7 +2,7 @@ import heapq
 from datetime import datetime, timedelta
 from models import Event
 from database import Database
-from intervaltree import IntervalTree, Interval
+from intervaltree import IntervalTree
 
 class EventManager:
     def __init__(self, db: Database):
@@ -58,7 +58,6 @@ class Scheduler:
     def schedule_event(self, event: Event):
         start = event.date
         end = start + timedelta(hours=1)  # Assume 1-hour events
-        # Convert datetime to seconds since epoch for IntervalTree
         start_ts = start.timestamp()
         end_ts = end.timestamp()
         

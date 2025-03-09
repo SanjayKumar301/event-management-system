@@ -1,3 +1,4 @@
+# database.py
 import sqlite3
 from datetime import datetime
 
@@ -72,7 +73,10 @@ class Database:
         cursor.execute('SELECT COUNT(*) FROM event_attendees WHERE event_id = ?', (event_id,))
         current_attendees = cursor.fetchone()[0]
         cursor.execute('SELECT capacity FROM events WHERE id = ?', (event_id,))
-        capacity = cursor.fetchone()[0]
+        capacity = cursor.fetchone()
+        if capacity is None:
+            return False  # Event doesn't exist
+        capacity = capacity[0]
         
         if current_attendees < capacity:
             cursor.execute('''
@@ -86,15 +90,16 @@ class Database:
     def get_attendee_count(self, event_id):
         cursor = self.conn.cursor()
         cursor.execute('SELECT COUNT(*) FROM event_attendees WHERE event_id = ?', (event_id,))
-        return cursor.fetchone()[0]
-    
+        result = cursor.fetchone()
+        return result[0] if result else 0
+
     def delete_event(self, event_id):
         cursor = self.conn.cursor()
         cursor.execute('DELETE FROM event_attendees WHERE event_id = ?', (event_id,))
         cursor.execute('DELETE FROM events WHERE id = ?', (event_id,))
         self.conn.commit()
         return cursor.rowcount > 0
-    
+
     def update_event(self, event_id, title=None, date=None, capacity=None, type=None, instructor=None):
         cursor = self.conn.cursor()
         updates = {}
