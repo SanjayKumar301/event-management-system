@@ -13,7 +13,7 @@ load_dotenv()
 db = Database()
 
 # JWT configuration
-SECRET_KEY = os.getenv("AUTHJWT_SECRET_KEY", "default-secret")
+SECRET_KEY = os.getenv("SECRET_KEY", "default-secret")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 REFRESH_TOKEN_EXPIRE_DAYS = 7
