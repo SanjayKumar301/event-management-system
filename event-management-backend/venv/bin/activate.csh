@@ -9,7 +9,7 @@ alias deactivate 'test $?_OLD_VIRTUAL_PATH != 0 && setenv PATH "$_OLD_VIRTUAL_PA
 # Unset irrelevant variables.
 deactivate nondestructive
 
-setenv VIRTUAL_ENV "/home/heisenberg/Projects/SEM - 2/JAVA-DSA/event-management-backend/venv"
+setenv VIRTUAL_ENV "/home/heisenberg/Projects/SEM - 2/Test/event-management-system/event-management-backend/venv"
 
 set _OLD_VIRTUAL_PATH="$PATH"
 setenv PATH "$VIRTUAL_ENV/bin:$PATH"

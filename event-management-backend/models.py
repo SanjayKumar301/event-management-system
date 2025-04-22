@@ -1,25 +1,32 @@
-# models.py
+from dataclasses import dataclass
 from datetime import datetime
-import uuid
+from typing import Optional
 
+@dataclass
 class Event:
-    def __init__(self, id: str, title: str, date: str, capacity: int, type: str = "basic", instructor: str = None):
-        self.id = id
-        self.title = title
-        # Try parsing ISO format first, then fallback to "YYYY-MM-DD HH:MM"
-        try:
-            self.date = datetime.fromisoformat(date)  # Handles "2025-03-10T14:00:00"
-        except ValueError:
-            self.date = datetime.strptime(date, "%Y-%m-%d %H:%M")  # Fallback for "2025-03-10 14:00"
-        self.capacity = capacity
-        self.type = type
-        self.instructor = instructor
+    id: str
+    title: str
+    date: datetime
+    capacity: int
+    duration_hours: float
+    type: str = "basic"
+    instructor: Optional[str] = None
+    created_by: Optional[str] = None  # user_id of organizer
 
     def display_details(self) -> str:
-        return f"Event: {self.title}, Date: {self.date}, Capacity: {self.capacity}"
+        """Return a string representation of the event details."""
+        return f"Event: {self.title}, Date: {self.date}, Capacity: {self.capacity}, Duration: {self.duration_hours} hours"
 
+@dataclass
 class Attendee:
-    def __init__(self, id: str, name: str, email: str):
-        self.id = id
-        self.name = name
-        self.email = email
+    id: str
+    name: str
+    email: str
+
+@dataclass
+class User:
+    id: str
+    name: str
+    email: str
+    password: str
+    role: str  # 'admin', 'organizer', or 'attendee'
