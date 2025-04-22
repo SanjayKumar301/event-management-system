@@ -14,6 +14,17 @@ import logging
 from contextlib import asynccontextmanager
 from jose import JWTError, jwt  # Added import for jwt and JWTError
 
+from dotenv import load_dotenv
+import os
+
+load_dotenv()  # Load variables from .env file
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS"))
+
+# Other authentication functions (e.g., create_access_token, get_current_user)
+
 # Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -123,24 +134,31 @@ def login(user: UserLogin):
     return {"access_token": access_token, "refresh_token": refresh_token}
 
 @app.post("/refresh", response_model=dict, summary="Refresh access token")
+@app.post("/refresh", response_model=dict, summary="Refresh access token")
 def refresh(token: str = Depends(oauth2_scheme)):
-    """Refresh an access token using a refresh token."""
     credentials_exception = HTTPException(
         status_code=401,
         detail="Invalid refresh token",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, "c6eaac684a84d092f1a407f7223d4acc0f142dcc30fe8073f380bba74bfce81c", algorithms=["HS256"])
+        logger.info(f"Refreshing token: {token[:20]}...")
+        logger.info(f"Using SECRET_KEY: {'set' if SECRET_KEY else 'unset'}, ALGORITHM: {ALGORITHM}")
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        logger.info(f"Token payload: {payload}")
         email: str = payload.get("sub")
         if email is None:
+            logger.error("No 'sub' in token payload")
             raise credentials_exception
-        # Verify it's a refresh token (e.g., by checking expiration duration)
         access_token = create_access_token(data={"sub": email})
         logger.info(f"Token refreshed for {email}")
         return {"message": "Token refreshed", "data": {"access_token": access_token}}
-    except JWTError:
+    except JWTError as e:
+        logger.error(f"JWTError: {str(e)}")
         raise credentials_exception
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Refresh failed: {str(e)}")
 
 # -------------------------------
 # Event Routes
