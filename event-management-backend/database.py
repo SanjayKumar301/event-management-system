@@ -147,7 +147,7 @@ class Database:
         if date: updates["date"] = date
         if capacity: updates["capacity"] = capacity
         if duration_hours: updates["duration_hours"] = duration_hours
-        if type: updates["type"] = typeNOR
+        if type: updates["type"] = type
         if instructor: updates["instructor"] = instructor
         if updates:
             set_clause = ", ".join(f"{k} = ?" for k in updates.keys())
